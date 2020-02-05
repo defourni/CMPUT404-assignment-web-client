@@ -37,17 +37,29 @@ class HTTPClient(object):
 
     def connect(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        host = socket.gethostbyname(host)
         self.socket.connect((host, port))
-        return None
+        return self.socket
 
     def get_code(self, data):
-        return None
+        #split body and head
+        raw_parts = data.split('\r\n\r\n')
+        #extract code
+        head_lines = raw_parts[0].split('\n')
+        code = head_lines[0].split()[1]
+        return code
 
     def get_headers(self,data):
-        return None
+        raw_parts = data.split('\r\n\r\n')
+        #extract code
+        head_lines = raw_parts[0].split('\n')
+        return head_lines
 
     def get_body(self, data):
-        return None
+        raw_parts = data.split('\r\n\r\n')
+        #extract code
+        body = raw_parts[1]
+        return body
     
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
@@ -66,13 +78,63 @@ class HTTPClient(object):
             else:
                 done = not part
         return buffer.decode('utf-8')
+    
+    def parse_url(self, url):
+        #parse URL
+        #remove http://
+        if (url[:7] == "http://") or (url[:8] == "https://"):
+            url = url.split('//')[1]
+        #separate path and host
+        if '/' in url:
+            host = url.split('/')[0]
+            path = url[len(host):]
+        else:
+            host = url
+            path = '/'
+        #separate port from host
+        if ':' in host:
+            port = host.split(':')[1]
+            host = host[:-(len(port)+1)]
+        else:
+            port = 80
+        return(host,port,path)
+        
 
     def GET(self, url, args=None):
-        code = 500
-        body = ""
+        ##parse URL
+        ##remove http://
+        #if (url[:7] == "http://") or (url[:8] == "https://"):
+            #url = url.split('//')[1]
+        ##separate path and host
+        #if '/' in url:
+            #host = url.split('/')[0]
+            #path = url[len(host):]
+        #else:
+            #host = url
+            #path = '/'
+        ##separate port from host
+        #if ':' in host:
+            #port = host.split(':')[1]
+            #host = host[:-(len(port)+1)]
+        #else:
+            #port = 80
+        host,port,path = self.parse_url(url)
+        
+        s = self.connect(host, int(port))
+        headers = '\r\nUser-Agent: curl/7.47.0\r\nAccept: text/html'
+        payload = 'GET ' + path + ' HTTP/1.1\r\nHost: ' + host + headers +'\r\n\r\n'
+        self.sendall(payload)
+        
+        full_data = self.recvall(self.socket)
+        self.close()
+    
+        code = self.get_code(full_data)
+        body = self.get_body(full_data)
+        print(body)
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
+        
         code = 500
         body = ""
         return HTTPResponse(code, body)
