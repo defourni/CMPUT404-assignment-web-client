@@ -39,7 +39,7 @@ class HTTPClient(object):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         host = socket.gethostbyname(host)
         self.socket.connect((host, port))
-        return self.socket
+        return None
 
     def get_code(self, data):
         #split body and head
@@ -101,26 +101,12 @@ class HTTPClient(object):
         
 
     def GET(self, url, args=None):
-        ##parse URL
-        ##remove http://
-        #if (url[:7] == "http://") or (url[:8] == "https://"):
-            #url = url.split('//')[1]
-        ##separate path and host
-        #if '/' in url:
-            #host = url.split('/')[0]
-            #path = url[len(host):]
-        #else:
-            #host = url
-            #path = '/'
-        ##separate port from host
-        #if ':' in host:
-            #port = host.split(':')[1]
-            #host = host[:-(len(port)+1)]
-        #else:
-            #port = 80
+        if args:
+            print("no args handler for GET")
+
         host,port,path = self.parse_url(url)
         
-        s = self.connect(host, int(port))
+        self.connect(host, int(port))
         headers = '\r\nUser-Agent: curl/7.47.0\r\nAccept: text/html'
         payload = 'GET ' + path + ' HTTP/1.1\r\nHost: ' + host + headers +'\r\n\r\n'
         self.sendall(payload)
@@ -128,15 +114,40 @@ class HTTPClient(object):
         full_data = self.recvall(self.socket)
         self.close()
     
-        code = self.get_code(full_data)
+        code = int(self.get_code(full_data))
         body = self.get_body(full_data)
         print(body)
         return HTTPResponse(code, body)
 
     def POST(self, url, args=None):
+        #args = {'a':'aaaaaaaaaaaaa',
+                #'b':'bbbbbbbbbbbbbbbbbbbbbb',
+                #'c':'c',
+                #'d':'012345\r67890\n2321321\n\r'}        
+        host,port,path = self.parse_url(url)
+        if args:
+            encoded_content = ""
+            for a in args:
+                encoded_content += (a + '=' + args[a] + '&')
+            #remove trailing ampersand
+            encoded_content = encoded_content[:-1]
+        else:
+            encoded_content = ""
         
-        code = 500
-        body = ""
+        self.connect(host, int(port))
+        headers = '\r\nUser-Agent: curl/7.47.0\r\nAccept: */*\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ' + str(len(encoded_content))
+        payload = 'POST ' + path + ' HTTP/1.1\r\nHost: ' + host + headers +'\r\n\r\n'
+        
+        payload = payload + encoded_content
+        
+        self.sendall(payload)
+        
+        full_data = self.recvall(self.socket)
+        self.close()
+        #print(full_data)
+        code = int(self.get_code(full_data))
+        body = self.get_body(full_data)
+        print(body)
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
