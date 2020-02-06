@@ -18,6 +18,24 @@
 # Write your own HTTP GET and POST
 # The point is to understand what you have to send and get experience with it
 
+#----------------------------------------------------------------------
+
+#Copyright 2020 Dexter Fournier
+#
+#  HTTPClient class used to send get and post requests to a given url. prints to stdout the body of the response and returns in an object both the body and HTTP code.
+#
+#Licensed under the Apache License, Version 2.0 (the "License");   
+#you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+
+    #http://www.apache.org/licenses/LICENSE-2.0
+
+#Unless required by applicable law or agreed to in writing, software
+#distributed under the License is distributed on an "AS IS" BASIS,
+#WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#See the License for the specific language governing permissions and
+#limitations under the License.
+
 import sys
 import socket
 import re
@@ -87,6 +105,7 @@ class HTTPClient(object):
         #separate path and host
         if '/' in url:
             host = url.split('/')[0]
+            #path could very easily have more than one /, so take the rest of it.
             path = url[len(host):]
         else:
             host = url
@@ -96,6 +115,7 @@ class HTTPClient(object):
             port = host.split(':')[1]
             host = host[:-(len(port)+1)]
         else:
+            #80 is default TCP port
             port = 80
         return(host,port,path)
         
@@ -123,7 +143,8 @@ class HTTPClient(object):
         #args = {'a':'aaaaaaaaaaaaa',
                 #'b':'bbbbbbbbbbbbbbbbbbbbbb',
                 #'c':'c',
-                #'d':'012345\r67890\n2321321\n\r'}        
+                #'d':'012345\r67890\n2321321\n\r'} 
+        
         host,port,path = self.parse_url(url)
         if args:
             encoded_content = ""
@@ -132,9 +153,11 @@ class HTTPClient(object):
             #remove trailing ampersand
             encoded_content = encoded_content[:-1]
         else:
+            #still needs something in encoded content since Content-Length requires this to be not null ( becomes 0 instead)
             encoded_content = ""
         
         self.connect(host, int(port))
+        #using curl as a user agent since some websites didn't like no user agent.
         headers = '\r\nUser-Agent: curl/7.47.0\r\nAccept: */*\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: ' + str(len(encoded_content))
         payload = 'POST ' + path + ' HTTP/1.1\r\nHost: ' + host + headers +'\r\n\r\n'
         
